@@ -29,19 +29,39 @@ class DeepLinkActivity : Activity() {
                     .putInt("current_step", 0)
                     .commit()
 
-                val steps = recipe.phases
-                    .sortedBy { it.position }
-                    .flatMap { phase ->
-                        phase.steps
-                            .sortedBy { it.position }
-                            .map { step -> "${phase.label} — ${step.label}" }
+                val phases = recipe.phases.sortedBy { it.position }
+
+                // Étapes aplaties avec index de phase
+                val steps = mutableListOf<Pair<String, Int>>()
+                phases.forEachIndexed { phaseIndex, phase ->
+                    phase.steps.sortedBy { it.position }.forEach { step ->
+                        steps.add(Pair("${phase.label} — ${step.label}", phaseIndex))
                     }
+                }
 
                 val editor = prefs.edit()
                 editor.putInt("step_count", steps.size)
-                steps.forEachIndexed { index, stepText ->
+                steps.forEachIndexed { index, (stepText, phaseIndex) ->
                     editor.putString("step_$index", stepText)
+                    editor.putInt("step_phase_$index", phaseIndex)
                 }
+
+                // Ingrédients par phase
+                editor.putInt("phase_count", phases.size)
+                phases.forEachIndexed { phaseIndex, phase ->
+                    val ingredients = phase.ingredients.sortedBy { it.position }
+                    editor.putInt("phase_${phaseIndex}_ingredient_count", ingredients.size)
+                    ingredients.forEachIndexed { i, ingredient ->
+                        val unit = ingredient.unit ?: ""
+                        val qty = if (ingredient.quantity % 1.0 == 0.0)
+                            ingredient.quantity.toInt().toString()
+                        else
+                            ingredient.quantity.toString()
+                        editor.putString("phase_${phaseIndex}_ingredient_$i",
+                            "${ingredient.label}|$qty|$unit")
+                    }
+                }
+
                 editor.commit()
 
             } catch (e: Exception) {

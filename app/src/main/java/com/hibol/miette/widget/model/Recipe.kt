@@ -10,7 +10,16 @@ data class Phase(
     val id: Int,
     val label: String,
     val position: Int,
-    val steps: List<Step>
+    val steps: List<Step>,
+    val ingredients: List<Ingredient>
+)
+
+data class Ingredient(
+    val id: Int,
+    val label: String,
+    val quantity: Double,
+    val unit: String?,
+    val position: Int
 )
 
 data class Step(

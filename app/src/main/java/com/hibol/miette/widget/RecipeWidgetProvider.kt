@@ -23,6 +23,24 @@ class RecipeWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_PREV = "com.hibol.miette.widget.ACTION_PREV"
         const val ACTION_NEXT = "com.hibol.miette.widget.ACTION_NEXT"
+
+        fun buildIngredientsColumns(prefs: android.content.SharedPreferences, phaseIndex: Int): Pair<String, String> {
+            val count = prefs.getInt("phase_${phaseIndex}_ingredient_count", 0)
+            val ingredients = (0 until count).map { i ->
+                val raw = prefs.getString("phase_${phaseIndex}_ingredient_$i", "") ?: ""
+                val parts = raw.split("|")
+                if (parts.size == 3) "${parts[0]} ${parts[1]}${parts[2]}" else raw
+            }
+
+            val left = StringBuilder()
+            val right = StringBuilder()
+            for (i in ingredients.indices step 2) {
+                left.appendLine(ingredients[i])
+                right.appendLine(if (i + 1 < ingredients.size) ingredients[i + 1] else "")
+            }
+            return Pair(left.toString().trimEnd(), right.toString().trimEnd())
+        }
+
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -42,10 +60,21 @@ class RecipeWidgetProvider : AppWidgetProvider() {
 
             val stepLabel = if (stepCount > 0) "Étape ${currentStep + 1} / $stepCount" else ""
 
+            // Ingrédients de la phase courante
+            val phaseIndex = if (stepCount > 0)
+                prefs.getInt("step_phase_$currentStep", 0)
+            else -1
+
+            val (leftText, rightText) = if (phaseIndex >= 0)
+                buildIngredientsColumns(prefs, phaseIndex)
+            else Pair("", "")
+
             val views = RemoteViews(context.packageName, R.layout.widget_recipe)
             views.setTextViewText(R.id.widget_title, title)
             views.setTextViewText(R.id.widget_step_label, stepLabel)
             views.setTextViewText(R.id.widget_step_text, stepText)
+            views.setTextViewText(R.id.widget_ingredients_left, leftText)
+            views.setTextViewText(R.id.widget_ingredients_right, rightText)
 
             // Bouton précédent
             val prevIntent = Intent(context, RecipeWidgetProvider::class.java).apply {
